@@ -1,29 +1,33 @@
 from django.shortcuts import render
-from rest_framework import viewsets
+from rest_framework import viewsets, filters
 from rest_framework.permissions import IsAuthenticated
-from django_filters import rest_framework as filters
+from django_filters.rest_framework import DjangoFilterBackend
 from .models import Composant
 from .serializers import ComposantSerializer
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 
 # Create your views here.
 
-class ComposantFilter(filters.FilterSet):
-    marque = filters.CharFilter(lookup_expr='icontains')
-    prix_min = filters.NumberFilter(field_name='prix_eur', lookup_expr='gte')
-    prix_max = filters.NumberFilter(field_name='prix_eur', lookup_expr='lte')
-    
-    class Meta:
-        model = Composant
-        fields = ['type', 'marque']
-
 @extend_schema(tags=['Composants'])
-class ComposantViewSet(viewsets.ReadOnlyModelViewSet):
+class ComposantViewSet(viewsets.ModelViewSet):
     queryset = Composant.objects.all()
     serializer_class = ComposantSerializer
     permission_classes = [IsAuthenticated]
-    filterset_class = ComposantFilter
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['type', 'marque']
+    search_fields = ['modele', 'marque']
+    ordering_fields = ['prix_eur']
     
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        prix_min = self.request.query_params.get('prix_min')
+        prix_max = self.request.query_params.get('prix_max')
+        if prix_min is not None:
+            queryset = queryset.filter(prix_eur__gte=float(prix_min))
+        if prix_max is not None:
+            queryset = queryset.filter(prix_eur__lte=float(prix_max))
+        return queryset
+
     @extend_schema(
         parameters=[
             OpenApiParameter(name='type', description='Type de composant (panneau, batterie, regulateur, onduleur)'),

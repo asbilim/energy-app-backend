@@ -1,21 +1,30 @@
 import os
 import json
+import logging
+import re
 from openai import OpenAI
 from django.conf import settings
 
+logger = logging.getLogger(__name__)
+
 class DimensionnementAIService:
     def __init__(self):
+        if not settings.OPENROUTER_API_KEY:
+            raise ValueError("OPENROUTER_API_KEY is not configured in settings")
+            
         self.client = OpenAI(
             base_url="https://openrouter.ai/api/v1",
             api_key=settings.OPENROUTER_API_KEY,
         )
         self.model = settings.AI_MODEL
+        logger.info(f"Initialized AI service with model: {self.model}")
     
     def calculer_dimensionnement(self, params):
         """
         Utilise l'IA pour calculer le dimensionnement optimal du système PV
         """
         prompt = self._build_prompt(params)
+        logger.info("Calculating dimensionnement with params: %s", params)
         
         try:
             completion = self.client.chat.completions.create(
@@ -24,8 +33,8 @@ class DimensionnementAIService:
                     {
                         "role": "system",
                         "content": "Tu es un expert en dimensionnement de systèmes photovoltaïques autonomes. "
-                                 "Réponds uniquement en JSON valide avec les calculs appropriés basés sur les "
-                                 "meilleures pratiques du domaine."
+                                 "Réponds UNIQUEMENT avec un objet JSON valide, sans aucun autre texte ou formatage. "
+                                 "Ne mets pas de ```json``` ou autre marqueur de code."
                     },
                     {
                         "role": "user",
@@ -36,13 +45,35 @@ class DimensionnementAIService:
             )
             
             response = completion.choices[0].message.content
-            return self._parse_ai_response(response)
+            logger.info("Received AI response: %s", response)
+            
+            # Clean up the response
+            cleaned_response = self._clean_response(response)
+            logger.info("Cleaned response: %s", cleaned_response)
+            
+            result = self._parse_ai_response(cleaned_response)
+            logger.info("Parsed AI response: %s", result)
+            return result
             
         except Exception as e:
+            logger.error("Error in AI calculation: %s", str(e), exc_info=True)
             raise Exception(f"Erreur lors du calcul IA: {str(e)}")
     
+    def _clean_response(self, response):
+        """
+        Nettoie la réponse de l'IA pour extraire uniquement le JSON
+        """
+        # Remove any text before the first {
+        response = re.sub(r'^[^{]*', '', response)
+        # Remove any text after the last }
+        response = re.sub(r'[^}]*$', '', response)
+        # Remove any markdown code blocks
+        response = re.sub(r'```json\s*', '', response)
+        response = re.sub(r'```\s*', '', response)
+        return response.strip()
+    
     def _build_prompt(self, params):
-        return f"""
+        prompt = f"""
         Dimensionne un système photovoltaïque autonome avec ces paramètres :
         - Consommation journalière : {params['consommation_journaliere_wh']} Wh
         - Profil de charge : {json.dumps(params['profil_charge'], ensure_ascii=False)}
@@ -50,7 +81,7 @@ class DimensionnementAIService:
         - Marge de sécurité : {params['marge_securite_pct']}%
         - Rendement système : {params['rendement_systeme_pct']}%
         
-        Réponds en JSON avec cette structure :
+        Réponds UNIQUEMENT avec un objet JSON qui contient ces champs :
         {{
             "nombre_panneaux": int,
             "puissance_panneau_w": int,
@@ -68,6 +99,8 @@ class DimensionnementAIService:
         3. Le dimensionnement respecte les marges de sécurité
         4. Les composants sont compatibles entre eux
         """
+        logger.debug("Built prompt: %s", prompt)
+        return prompt
     
     def _parse_ai_response(self, response):
         """
@@ -87,7 +120,9 @@ class DimensionnementAIService:
             
             return data
             
-        except json.JSONDecodeError:
-            raise Exception("La réponse de l'IA n'est pas un JSON valide")
+        except json.JSONDecodeError as e:
+            logger.error("Invalid JSON response: %s", response)
+            raise Exception(f"La réponse de l'IA n'est pas un JSON valide: {str(e)}")
         except Exception as e:
+            logger.error("Error parsing AI response: %s", str(e))
             raise Exception(f"Erreur lors du parsing de la réponse: {str(e)}") 

@@ -25,7 +25,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('DJANGO_SECRET')
+SECRET_KEY = os.getenv('SECRET_KEY',"f38a676a301c48b1dd40af5d6fd4b2b39ffd1730365bd9fd3bf7d5f5743699d86963574914f5e28edaa8856117d80dee")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     # Third party apps
     'rest_framework',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
     'drf_spectacular',
     'corsheaders',
     # Local apps
@@ -175,3 +176,28 @@ SPECTACULAR_SETTINGS = {
 # OpenRouter AI settings
 OPENROUTER_API_KEY = os.getenv('OPENROUTER_APIKEY')
 AI_MODEL = os.getenv('AI_MODEL', 'deepseek/deepseek-chat-v3-0324:free')
+
+# Logging configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'dimensionnement.services.ai_service': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+    },
+}
