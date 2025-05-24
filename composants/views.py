@@ -5,6 +5,8 @@ from django_filters.rest_framework import DjangoFilterBackend
 from .models import Composant
 from .serializers import ComposantSerializer
 from drf_spectacular.utils import extend_schema, OpenApiParameter
+from rest_framework.exceptions import ValidationError
+from energy.permissions import IsAdminOrReadOnly
 
 # Create your views here.
 
@@ -12,7 +14,7 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter
 class ComposantViewSet(viewsets.ModelViewSet):
     queryset = Composant.objects.all()
     serializer_class = ComposantSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['type', 'marque']
     search_fields = ['modele', 'marque']
@@ -22,10 +24,13 @@ class ComposantViewSet(viewsets.ModelViewSet):
         queryset = super().get_queryset()
         prix_min = self.request.query_params.get('prix_min')
         prix_max = self.request.query_params.get('prix_max')
-        if prix_min is not None:
-            queryset = queryset.filter(prix_eur__gte=float(prix_min))
-        if prix_max is not None:
-            queryset = queryset.filter(prix_eur__lte=float(prix_max))
+        try:
+            if prix_min is not None:
+                queryset = queryset.filter(prix_eur__gte=float(prix_min))
+            if prix_max is not None:
+                queryset = queryset.filter(prix_eur__lte=float(prix_max))
+        except ValueError:
+            raise ValidationError("Les paramètres prix_min et prix_max doivent être des valeurs numériques.")
         return queryset
 
     @extend_schema(

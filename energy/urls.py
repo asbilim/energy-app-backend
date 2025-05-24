@@ -20,7 +20,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 
-from authentication.views import RegisterView, CustomTokenObtainPairView
+from authentication.views import RegisterView, CustomTokenObtainPairView, LogoutView
 from dimensionnement.views import DimensionnementViewSet
 from composants.views import ComposantViewSet
 
@@ -36,6 +36,7 @@ urlpatterns = [
     path('api/auth/register/', RegisterView.as_view(), name='register'),
     path('api/auth/login/', CustomTokenObtainPairView.as_view(), name='login'),
     path('api/auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/auth/logout/', LogoutView.as_view(), name='logout'),
     
     # API Routes
     path('api/', include(router.urls)),

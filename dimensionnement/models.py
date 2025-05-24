@@ -18,6 +18,7 @@ class Dimensionnement(models.Model):
     regulateur_data = models.JSONField(null=True)
     onduleur_data = models.JSONField(null=True)
     irradiation_moyenne_kwh_m2_j = models.FloatField(null=True)
+    explication = models.TextField(null=True, blank=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

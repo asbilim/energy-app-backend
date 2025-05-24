@@ -5,11 +5,12 @@ class DimensionnementSerializer(serializers.ModelSerializer):
     class Meta:
         model = Dimensionnement
         fields = '__all__'
-        read_only_fields = ('user', 'created_at', 'updated_at', 
-                          'nombre_panneaux', 'puissance_panneau_w', 
-                          'capacite_batterie_ah', 'tension_systeme_v',
-                          'regulateur_data', 'onduleur_data', 
-                          'irradiation_moyenne_kwh_m2_j')
+        read_only_fields = (
+            'user', 'nombre_panneaux', 'puissance_panneau_w',
+            'capacite_batterie_ah', 'tension_systeme_v',
+            'regulateur_data', 'onduleur_data', 'irradiation_moyenne_kwh_m2_j',
+            'explication', 'created_at', 'updated_at'
+        )
     
     def validate_profil_charge(self, value):
         """
