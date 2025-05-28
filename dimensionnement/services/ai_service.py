@@ -9,15 +9,21 @@ logger = logging.getLogger(__name__)
 
 class DimensionnementAIService:
     def __init__(self):
-        if not settings.OPENROUTER_API_KEY:
+        if not settings.OPENROUTER_API_KEY and not settings.DEBUG:
             raise ValueError("OPENROUTER_API_KEY is not configured in settings")
             
-        self.client = OpenAI(
-            base_url="https://openrouter.ai/api/v1",
-            api_key=settings.OPENROUTER_API_KEY,
-        )
-        self.model = settings.AI_MODEL
-        logger.info(f"Initialized AI service with model: {self.model}")
+        # During development with DEBUG=True, we can use a mock client
+        if settings.DEBUG and not settings.OPENROUTER_API_KEY:
+            self.client = None
+            self.model = "mock-model"
+            logger.info("Using mock AI service in debug mode")
+        else:
+            self.client = OpenAI(
+                base_url="https://openrouter.ai/api/v1",
+                api_key=settings.OPENROUTER_API_KEY,
+            )
+            self.model = settings.AI_MODEL
+            logger.info(f"Initialized AI service with model: {self.model}")
     
     def calculer_dimensionnement(self, params):
         """
@@ -27,6 +33,20 @@ class DimensionnementAIService:
         logger.info("Calculating dimensionnement with params: %s", params)
         
         try:
+            # If in debug mode without API key, return mock data
+            if settings.DEBUG and self.client is None:
+                logger.info("Using mock AI response in debug mode")
+                return {
+                    "nombre_panneaux": 4,
+                    "puissance_panneau_w": 400,
+                    "capacite_batterie_ah": 200,
+                    "tension_systeme_v": 24,
+                    "regulateur": {"type": "MPPT", "courant_max_a": 40},
+                    "onduleur": {"puissance_nominale_w": 2000, "rendement_pct": 95.5},
+                    "irradiation_moyenne_kwh_m2_j": 4.2,
+                    "explication": "Ceci est une réponse de test générée automatiquement en mode DEBUG."
+                }
+            
             completion = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
@@ -74,31 +94,41 @@ class DimensionnementAIService:
     
     def _build_prompt(self, params):
         prompt = f"""
-        Dimensionne un système photovoltaïque autonome avec ces paramètres :
-        - Consommation journalière : {params['consommation_journaliere_wh']} Wh
-        - Profil de charge : {json.dumps(params['profil_charge'], ensure_ascii=False)}
-        - Localisation : {params['latitude']}, {params['longitude']}
-        - Marge de sécurité : {params['marge_securite_pct']}%
-        - Rendement système : {params['rendement_systeme_pct']}%
-        
-        Réponds UNIQUEMENT avec un objet JSON qui contient ces champs :
-        {{
-            "nombre_panneaux": int,
-            "puissance_panneau_w": int,
-            "capacite_batterie_ah": int,
-            "tension_systeme_v": int,
-            "regulateur": {{"type": "MPPT/PWM", "courant_max_a": int}},
-            "onduleur": {{"puissance_nominale_w": int, "rendement_pct": float}},
-            "irradiation_moyenne_kwh_m2_j": float,
-            "explication": "string"
-        }}
-        
-        Assure-toi que :
-        1. Les calculs prennent en compte l'irradiation solaire locale
-        2. La capacité batterie couvre 2 jours d'autonomie
-        3. Le dimensionnement respecte les marges de sécurité
-        4. Les composants sont compatibles entre eux
-        """
+Analyze the following parameters for an autonomous photovoltaic system:
+- Daily Consumption: {params['consommation_journaliere_wh']} Wh
+- Load Profile (hourly distribution): {json.dumps(params['profil_charge'], ensure_ascii=False)}
+- Location (Latitude, Longitude): {params['latitude']}, {params['longitude']}
+- Safety Margin: {params['marge_securite_pct']}%
+- System Efficiency: {params['rendement_systeme_pct']}%
+
+Based on this data, generate a SINGLE, VALID JSON OBJECT containing the sizing results.
+The JSON object MUST strictly follow this structure and include all specified fields:
+
+{{
+    "nombre_panneaux": <integer>,
+    "puissance_panneau_w": <integer>,        // Typical power of a single panel in Watts
+    "capacite_batterie_ah": <integer>,   // Total battery capacity in Ampere-hours
+    "tension_systeme_v": <integer>,          // System voltage (e.g., 12, 24, 48)
+    "regulateur": {{
+        "type": "<string: MPPT or PWM>",
+        "courant_max_a": <integer>          // Maximum current handling capacity in Amperes
+    }},
+    "onduleur": {{
+        "puissance_nominale_w": <integer>, // Nominal power output in Watts
+        "rendement_pct": <float>           // Efficiency in percentage (e.g., 95.5)
+    }},
+    "irradiation_moyenne_kwh_m2_j": <float>, // Average daily solar irradiation in kWh/m²/day for the location
+    "explication": "<string>"              // Brief technical explanation of the sizing choices. Must be a simple JSON string.
+}}
+
+IMPORTANT INSTRUCTIONS:
+1.  Your entire response MUST be ONLY the JSON object, IN FRENCH.
+2.  The 'explication' field MUST be in FRENCH and provide a detailed technical justification for the main sizing choices (panels, battery, system voltage), including how they relate to consumption, autonomy, and location.
+3.  Do NOT include any introductory text, concluding remarks, apologies, or any characters before the opening '{{' or after the closing '}}' of the JSON.
+4.  Ensure all numerical values are actual numbers (integer or float) and not strings.
+5.  The calculations should consider local solar irradiation for the given coordinates and ensure the battery capacity covers at least 2 days of autonomy, respecting the safety margin.
+6.  All components (panels, battery, regulator, inverter) must be compatible with each other and the system voltage.
+"""
         logger.debug("Built prompt: %s", prompt)
         return prompt
     

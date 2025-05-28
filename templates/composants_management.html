@@ -1,0 +1,146 @@
+{% load static %} {% load markdown_extras %}
+
+<div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+  <h2 class="text-xl font-medium mb-6">Gestion des Composants</h2>
+
+  <!-- Add New Component Form -->
+  <div class="mb-8 p-6 border border-gray-200 rounded-lg bg-gray-50">
+    <h3 class="text-lg font-medium mb-4">Ajouter un Nouveau Composant</h3>
+    <form
+      id="addComponentForm"
+      hx-post="{% url 'composant-list' %}"
+      hx-target="#composants-list-container"
+      hx-swap="innerHTML"
+      hx-indicator="#component-form-indicator"
+      class="space-y-4">
+      {% csrf_token %}
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label for="id_type" class="block text-sm font-medium text-gray-700"
+            >Type</label
+          >
+          <select
+            name="type"
+            id="id_type"
+            required
+            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            <option value="panneau">Panneau</option>
+            <option value="batterie">Batterie</option>
+            <option value="regulateur">Régulateur</option>
+            <option value="onduleur">Onduleur</option>
+          </select>
+        </div>
+        <div>
+          <label for="id_marque" class="block text-sm font-medium text-gray-700"
+            >Marque</label
+          >
+          <input
+            type="text"
+            name="marque"
+            id="id_marque"
+            required
+            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+        </div>
+        <div>
+          <label for="id_modele" class="block text-sm font-medium text-gray-700"
+            >Modèle</label
+          >
+          <input
+            type="text"
+            name="modele"
+            id="id_modele"
+            required
+            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+        </div>
+        <div>
+          <label
+            for="id_prix_eur"
+            class="block text-sm font-medium text-gray-700"
+            >Prix (€)</label
+          >
+          <input
+            type="number"
+            name="prix_eur"
+            id="id_prix_eur"
+            step="0.01"
+            required
+            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+        </div>
+      </div>
+      <div>
+        <label
+          for="id_specifications"
+          class="block text-sm font-medium text-gray-700"
+          >Spécifications (JSON)</label
+        >
+        <textarea
+          name="specifications"
+          id="id_specifications"
+          rows="4"
+          required
+          class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+          placeholder='Ex: {"puissance_w": 400, "tension_mpp_v": 32.5, ...}'></textarea>
+        <p class="mt-1 text-xs text-gray-500">
+          Doit être un JSON valide. Voir la documentation pour les champs requis
+          par type.
+        </p>
+      </div>
+      <div class="flex items-center">
+        <button
+          type="submit"
+          class="bg-blue-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
+          Ajouter Composant
+        </button>
+        <div
+          id="component-form-indicator"
+          class="htmx-indicator ml-3 flex items-center text-sm text-gray-500">
+          <svg
+            class="animate-spin h-4 w-4 mr-2"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24">
+            <circle
+              class="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="4"></circle>
+            <path
+              class="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8v8H4z"></path></svg
+          >Ajout en cours...
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- List of Existing Components -->
+  <h3 class="text-lg font-medium mb-4">Composants Existants</h3>
+  <div
+    id="composants-list-container"
+    hx-get="{% url 'composant-list' %}"
+    hx-trigger="load, newComponent from:body"
+    hx-swap="innerHTML">
+    <div class="flex items-center justify-center py-4">
+      <svg
+        class="animate-spin h-5 w-5 mr-2"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24">
+        <circle
+          class="opacity-25"
+          cx="12"
+          cy="12"
+          r="10"
+          stroke="currentColor"
+          stroke-width="4"></circle>
+        <path
+          class="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8v8H4z"></path></svg
+      >Chargement des composants...
+    </div>
+  </div>
+</div>

@@ -1,0 +1,85 @@
+{% if composants|length > 0 %}
+<div class="overflow-x-auto">
+  <table class="min-w-full divide-y divide-gray-200">
+    <thead class="bg-gray-50">
+      <tr>
+        <th
+          class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+          Type
+        </th>
+        <th
+          class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+          Marque
+        </th>
+        <th
+          class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+          Modèle
+        </th>
+        <th
+          class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+          Prix (€)
+        </th>
+        <th
+          class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+          Spécifications
+        </th>
+      </tr>
+    </thead>
+    <tbody class="bg-white divide-y divide-gray-200">
+      {% for comp in composants %}
+      <tr class="hover:bg-gray-50 transition-colors">
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+          {{ comp.get_type_display }}
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+          {{ comp.marque }}
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+          {{ comp.modele }}
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+          {{ comp.prix_eur }}
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+          <pre class="text-xs bg-gray-100 p-2 rounded">
+{{ comp.specifications|json_script:"specs-"|safe }}</pre
+          >
+        </td>
+        {# Add actions like edit/delete if needed later #}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="text-center text-gray-500 py-8">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    class="h-12 w-12 mx-auto text-gray-400 mb-4"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor">
+    <path
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+  </svg>
+  <p class="text-lg font-medium">Aucun composant trouvé.</p>
+  <p class="text-sm mt-2">
+    Ajoutez des composants en utilisant le formulaire ci-dessus.
+  </p>
+</div>
+{% endif %}
+
+<script>
+  // Re-apply pretty print for JSON if needed, or specific styling
+  document.querySelectorAll("pre").forEach((block) => {
+    try {
+      const parsedJson = JSON.parse(block.textContent);
+      block.textContent = JSON.stringify(parsedJson, null, 2);
+    } catch (e) {
+      // Not valid JSON, leave as is
+    }
+  });
+</script>

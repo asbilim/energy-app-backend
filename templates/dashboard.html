@@ -1,0 +1,488 @@
+{% extends "base.html" %} 
+{% block title %}Tableau de bord - Energy App 
+{% endblock %} {% block extra_head %}
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"
+  integrity="sha256-kLaT2GOSpHechhsozzB+flnD+zUyjE2LlfWPgU04xyI="
+  crossorigin="" />
+<style>
+  #map {
+    height: 250px;
+    width: 100%;
+    border-radius: 0.375rem;
+    margin-bottom: 1rem;
+  }
+  .htmx-indicator {
+    opacity: 0;
+    transition: opacity 200ms ease-in;
+  }
+  .htmx-request .htmx-indicator {
+    opacity: 1;
+  }
+  .htmx-request.htmx-indicator {
+    opacity: 1;
+  }
+  [data-tab-content] {
+    display: none;
+  }
+  .active[data-tab-content] {
+    display: block;
+  }
+  .tab-button.active {
+    background-color: #3b82f6;
+    color: white;
+  }
+</style>
+{% endblock %} {% block content %}
+<div class="space-y-8">
+  <!-- Welcome section -->
+  <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+    <h1 class="text-2xl font-bold text-gray-900">
+      Bienvenue, {{ user.username }}
+    </h1>
+    <p class="text-gray-600 mt-2">
+      Gérez vos dimensionnements et composants photovoltaïques.
+    </p>
+  </div>
+
+  <!-- Tabs -->
+  <div class="mb-4 border-b border-gray-200">
+    <ul
+      class="flex flex-wrap -mb-px text-sm font-medium text-center"
+      id="dashboardTabs"
+      role="tablist">
+      <li class="mr-2" role="presentation">
+        <button
+          class="tab-button inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300 active"
+          id="new-dim-tab"
+          data-tabs-target="#new-dimensionnement"
+          type="button"
+          role="tab"
+          aria-controls="new-dimensionnement"
+          aria-selected="true">
+          Nouveau Dimensionnement
+        </button>
+      </li>
+      <li class="mr-2" role="presentation">
+        <button
+          class="tab-button inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300"
+          id="simulations-tab"
+          data-tabs-target="#my-simulations"
+          type="button"
+          role="tab"
+          aria-controls="my-simulations"
+          aria-selected="false">
+          Mes Simulations
+        </button>
+      </li>
+      <li class="mr-2" role="presentation">
+        <button
+          class="tab-button inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300"
+          id="composants-tab"
+          data-tabs-target="#manage-composants"
+          type="button"
+          role="tab"
+          aria-controls="manage-composants"
+          aria-selected="false">
+          Gestion des Composants
+        </button>
+      </li>
+    </ul>
+  </div>
+
+  <!-- Tab Content -->
+  <div id="dashboardTabContent">
+    <!-- New Dimensionnement Form -->
+    <div
+      class="active"
+      id="new-dimensionnement"
+      role="tabpanel"
+      aria-labelledby="new-dim-tab"
+      data-tab-content>
+      <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+        <h2 class="text-xl font-medium mb-4">Nouveau Dimensionnement</h2>
+
+        <form
+          id="newDimensionnementForm"
+          hx-post="/api/dimensionnements/"
+          hx-target="#simulations-list-content"
+          hx-swap="innerHTML"
+          hx-indicator="#form-indicator"
+          class="space-y-6">
+          {% csrf_token %}
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Consommation journalière -->
+            <div>
+              <label
+                for="id_consommation_journaliere_wh"
+                class="block text-sm font-medium text-gray-700 mb-1">
+                Consommation journalière (Wh)
+              </label>
+              <input
+                type="number"
+                name="consommation_journaliere_wh"
+                id="id_consommation_journaliere_wh"
+                required
+                min="1"
+                placeholder="Ex: 5000"
+                class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <p class="text-xs text-gray-500 mt-1">
+                Entrez votre consommation quotidienne estimée en Watt-heures
+              </p>
+            </div>
+
+            <!-- Profil de charge (simplifié) -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Profil de charge
+              </label>
+              <div class="space-y-2">
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label for="charge_matin" class="text-xs text-gray-600"
+                      >Matin (6h-12h)</label
+                    >
+                    <input
+                      type="range"
+                      id="charge_matin"
+                      min="0"
+                      max="100"
+                      value="30"
+                      class="w-full"
+                      oninput="updateProfile()" />
+                    <span id="charge_matin_value" class="text-xs">30%</span>
+                  </div>
+                  <div>
+                    <label for="charge_midi" class="text-xs text-gray-600"
+                      >Midi (12h-14h)</label
+                    >
+                    <input
+                      type="range"
+                      id="charge_midi"
+                      min="0"
+                      max="100"
+                      value="20"
+                      class="w-full"
+                      oninput="updateProfile()" />
+                    <span id="charge_midi_value" class="text-xs">20%</span>
+                  </div>
+                  <div>
+                    <label for="charge_aprem" class="text-xs text-gray-600"
+                      >Après-midi (14h-18h)</label
+                    >
+                    <input
+                      type="range"
+                      id="charge_aprem"
+                      min="0"
+                      max="100"
+                      value="15"
+                      class="w-full"
+                      oninput="updateProfile()" />
+                    <span id="charge_aprem_value" class="text-xs">15%</span>
+                  </div>
+                  <div>
+                    <label for="charge_soir" class="text-xs text-gray-600"
+                      >Soir (18h-23h)</label
+                    >
+                    <input
+                      type="range"
+                      id="charge_soir"
+                      min="0"
+                      max="100"
+                      value="35"
+                      class="w-full"
+                      oninput="updateProfile()" />
+                    <span id="charge_soir_value" class="text-xs">35%</span>
+                  </div>
+                </div>
+                <input
+                  type="hidden"
+                  name="profil_charge"
+                  id="profil_charge_json"
+                  value='{"6": 200, "12": 500, "14": 300, "18": 600, "23": 200}' />
+              </div>
+            </div>
+          </div>
+
+          <!-- Map for location selection -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Emplacement (cliquez sur la carte pour sélectionner)
+            </label>
+            <div id="map" class="mt-1"></div>
+            <div class="mt-2 grid grid-cols-2 gap-4">
+              <div>
+                <label for="id_latitude" class="block text-xs text-gray-600"
+                  >Latitude</label
+                >
+                <input
+                  type="number"
+                  name="latitude"
+                  id="id_latitude"
+                  required
+                  step="0.000001"
+                  min="-90"
+                  max="90"
+                  value="48.8566"
+                  readonly
+                  class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label for="id_longitude" class="block text-xs text-gray-600"
+                  >Longitude</label
+                >
+                <input
+                  type="number"
+                  name="longitude"
+                  id="id_longitude"
+                  required
+                  step="0.000001"
+                  min="-180"
+                  max="180"
+                  value="2.3522"
+                  readonly
+                  class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Paramètres supplémentaires -->
+            <div>
+              <label
+                for="id_marge_securite_pct"
+                class="block text-sm font-medium text-gray-700 mb-1">
+                Marge de sécurité (%)
+              </label>
+              <input
+                type="number"
+                name="marge_securite_pct"
+                id="id_marge_securite_pct"
+                value="20"
+                min="0"
+                max="100"
+                class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+
+            <div>
+              <label
+                for="id_rendement_systeme_pct"
+                class="block text-sm font-medium text-gray-700 mb-1">
+                Rendement système (%)
+              </label>
+              <input
+                type="number"
+                name="rendement_systeme_pct"
+                id="id_rendement_systeme_pct"
+                value="85"
+                min="0"
+                max="100"
+                class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+          </div>
+
+          <div class="flex items-center">
+            <button
+              type="submit"
+              class="bg-green-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-green-700 transition-colors">
+              Calculer
+            </button>
+
+            <!-- Loading indicator -->
+            <div
+              id="form-indicator"
+              class="htmx-indicator ml-3 flex items-center text-sm text-gray-500">
+              <svg
+                class="animate-spin h-4 w-4 mr-2"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24">
+                <circle
+                  class="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  stroke-width="4"></circle>
+                <path
+                  class="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v8H4z"></path>
+              </svg>
+              Calcul en cours...
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Previous Simulations -->
+    <div
+      id="my-simulations"
+      role="tabpanel"
+      aria-labelledby="simulations-tab"
+      data-tab-content>
+      <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+        <h2 class="text-xl font-medium mb-4">Simulations précédentes</h2>
+
+        <div
+          id="simulations-list-content"
+          class="min-h-[50px]"
+          hx-get="/api/dimensionnements/"
+          hx-trigger="load, newSimulation from:body"
+          hx-swap="innerHTML"
+          hx-indicator="#list-indicator">
+          <!-- Loading indicator -->
+          <div
+            id="list-indicator"
+            class="htmx-indicator flex items-center justify-center py-4">
+            <svg
+              class="animate-spin h-5 w-5 mr-2"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24">
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"></circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8v8H4z"></path>
+            </svg>
+            Chargement des simulations...
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Component Management -->
+    <div
+      id="manage-composants"
+      role="tabpanel"
+      aria-labelledby="composants-tab"
+      data-tab-content>
+      <div
+        hx-get="{% url 'composants_management' %}"
+        hx-trigger="load"
+        hx-swap="innerHTML">
+        <div class="flex items-center justify-center py-4">
+          <svg
+            class="animate-spin h-5 w-5 mr-2"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24">
+            <circle
+              class="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="4"></circle>
+            <path
+              class="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8v8H4z"></path></svg
+          >Chargement de la gestion des composants...
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block extra_scripts %}
+<script
+  src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"
+  integrity="sha256-WBkoXOwTeyKclOHuWtc+i2uENFpDZ9YPdf5Hf+D7ewM="
+  crossorigin=""></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // Initialize map
+    var map = L.map("map").setView([48.8566, 2.3522], 5);
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "© OpenStreetMap",
+    }).addTo(map);
+    var marker = L.marker([48.8566, 2.3522]).addTo(map);
+    map.on("click", function (e) {
+      marker.setLatLng(e.latlng);
+      document.getElementById("id_latitude").value = e.latlng.lat.toFixed(6);
+      document.getElementById("id_longitude").value = e.latlng.lng.toFixed(6);
+    });
+
+    // Function to update the profile of charge
+    window.updateProfile = function () {
+      const ids = ["matin", "midi", "aprem", "soir"];
+      let totalPercentage = 0;
+      const profileValues = {};
+      const consumption =
+        parseInt(
+          document.getElementById("id_consommation_journaliere_wh").value
+        ) || 0;
+
+      ids.forEach((id) => {
+        const slider = document.getElementById("charge_" + id);
+        const display = document.getElementById("charge_" + id + "_value");
+        const percentage = parseInt(slider.value);
+        display.textContent = percentage + "%";
+        totalPercentage += percentage;
+
+        // Define hour mapping (adjust as needed)
+        const hourMap = { matin: "6", midi: "12", aprem: "14", soir: "18" };
+        profileValues[hourMap[id]] = Math.round(
+          consumption * (percentage / 100)
+        );
+      });
+
+      // Ensure total percentage is 100 (optional: distribute remainder/deficit or show warning)
+      // For simplicity, we'll just use the values. Add "23":0 for completeness of the day.
+      profileValues["23"] = 0;
+      document.getElementById("profil_charge_json").value =
+        JSON.stringify(profileValues);
+    };
+
+    updateProfile(); // Initial call
+    document
+      .getElementById("id_consommation_journaliere_wh")
+      .addEventListener("input", updateProfile);
+
+    // Tab functionality
+    const tabButtons = document.querySelectorAll(".tab-button");
+    const tabContents = document.querySelectorAll("[data-tab-content]");
+    tabButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        tabButtons.forEach((btn) => btn.classList.remove("active"));
+        button.classList.add("active");
+        const target = document.querySelector(button.dataset.tabsTarget);
+        tabContents.forEach((content) => content.classList.remove("active"));
+        target.classList.add("active");
+      });
+    });
+
+    // Listen for new simulation event to refresh list and switch tab
+    document.body.addEventListener("htmx:afterOnLoad", function (evt) {
+      if (
+        evt.detail.elt.id === "newDimensionnementForm" &&
+        evt.detail.xhr.status === 200 &&
+        evt.detail.target.id === "simulations-list-content"
+      ) {
+        // Trigger a custom event that the simulations list can listen to
+        htmx.trigger("#simulations-list-content", "newSimulation", {});
+        // Switch to the simulations tab
+        document.getElementById("simulations-tab").click();
+      }
+    });
+
+    // Listen for custom showToast event triggered by HX-Trigger
+    document.body.addEventListener("showToast", function (evt) {
+      if (evt.detail && evt.detail.message) {
+        showToast(evt.detail.message, evt.detail.type || "info");
+      }
+    });
+  });
+</script>
+{% endblock %}

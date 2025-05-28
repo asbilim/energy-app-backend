@@ -1,0 +1,128 @@
+{% load markdown_extras %}
+<div
+  class="bg-white rounded-lg p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+  <div class="flex items-center justify-between mb-6">
+    <h2 class="text-xl font-bold">Détails du dimensionnement</h2>
+    <button
+      class="text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-full p-2 transition-colors"
+      onclick="document.getElementById('detail-modal').classList.add('hidden'); document.getElementById('detail-modal').innerHTML = ''; document.body.classList.remove('overflow-hidden');">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        class="h-5 w-5"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor">
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <div class="bg-blue-50 p-4 rounded-md border border-blue-100">
+      <h3 class="font-medium text-blue-800 mb-3 text-lg">
+        Paramètres d'entrée
+      </h3>
+      <dl class="grid grid-cols-2 gap-3 text-sm">
+        <dt class="text-blue-700 font-medium">Consommation :</dt>
+        <dd class="text-blue-900">
+          {{ dimensionnement.consommation_journaliere_wh }} Wh
+        </dd>
+
+        <dt class="text-blue-700 font-medium">Localisation :</dt>
+        <dd class="text-blue-900">
+          {{ dimensionnement.latitude }}, {{ dimensionnement.longitude }}
+        </dd>
+
+        <dt class="text-blue-700 font-medium">Marge sécurité :</dt>
+        <dd class="text-blue-900">{{ dimensionnement.marge_securite_pct }}%</dd>
+
+        <dt class="text-blue-700 font-medium">Rendement :</dt>
+        <dd class="text-blue-900">
+          {{ dimensionnement.rendement_systeme_pct }}%
+        </dd>
+      </dl>
+    </div>
+
+    <div class="bg-green-50 p-4 rounded-md border border-green-100">
+      <h3 class="font-medium text-green-800 mb-3 text-lg">
+        Résultats principaux
+      </h3>
+      <dl class="grid grid-cols-2 gap-3 text-sm">
+        <dt class="text-green-700 font-medium">Panneaux :</dt>
+        <dd class="text-green-900">
+          {{ dimensionnement.nombre_panneaux }} x
+          {{dimensionnement.puissance_panneau_w}}W
+        </dd>
+
+        <dt class="text-green-700 font-medium">Batterie :</dt>
+        <dd class="text-green-900">
+          {{ dimensionnement.capacite_batterie_ah }}Ah /
+          {{dimensionnement.tension_systeme_v}}V
+        </dd>
+
+        <dt class="text-green-700 font-medium">Irradiation :</dt>
+        <dd class="text-green-900">
+          {{ dimensionnement.irradiation_moyenne_kwh_m2_j }} kWh/m²/j
+        </dd>
+
+        <dt class="text-green-700 font-medium">Date calcul :</dt>
+        <dd class="text-green-900">
+          {{ dimensionnement.created_at|date:"d/m/Y H:i" }}
+        </dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <div class="bg-amber-50 p-4 rounded-md border border-amber-100">
+      <h3 class="font-medium text-amber-800 mb-3 text-lg">Régulateur</h3>
+      <dl class="grid grid-cols-2 gap-3 text-sm">
+        <dt class="text-amber-700 font-medium">Type :</dt>
+        <dd class="text-amber-900">
+          {{ dimensionnement.regulateur_data.type }}
+        </dd>
+
+        <dt class="text-amber-700 font-medium">Courant max :</dt>
+        <dd class="text-amber-900">
+          {{ dimensionnement.regulateur_data.courant_max_a }} A
+        </dd>
+      </dl>
+    </div>
+
+    <div class="bg-purple-50 p-4 rounded-md border border-purple-100">
+      <h3 class="font-medium text-purple-800 mb-3 text-lg">Onduleur</h3>
+      <dl class="grid grid-cols-2 gap-3 text-sm">
+        <dt class="text-purple-700 font-medium">Puissance :</dt>
+        <dd class="text-purple-900">
+          {{ dimensionnement.onduleur_data.puissance_nominale_w }} W
+        </dd>
+
+        <dt class="text-purple-700 font-medium">Rendement :</dt>
+        <dd class="text-purple-900">
+          {{ dimensionnement.onduleur_data.rendement_pct }}%
+        </dd>
+      </dl>
+    </div>
+  </div>
+
+  {% if dimensionnement.explication %}
+  <div class="bg-gray-50 p-4 rounded-md border border-gray-200 mb-6">
+    <h3 class="font-medium text-gray-800 mb-3 text-lg">Explication</h3>
+    <div class="text-sm text-gray-700 prose max-w-none">
+      {{ dimensionnement.explication|render_markdown|safe }}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="flex justify-end">
+    <button
+      class="bg-gray-200 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-300 transition-colors"
+      onclick="document.getElementById('detail-modal').classList.add('hidden'); document.getElementById('detail-modal').innerHTML = ''; document.body.classList.remove('overflow-hidden');">
+      Fermer
+    </button>
+  </div>
+</div>

@@ -1,0 +1,133 @@
+{% if simulations|length > 0 %}
+<div class="overflow-x-auto">
+  <table class="min-w-full divide-y divide-gray-200">
+    <thead class="bg-gray-50">
+      <tr>
+        <th
+          scope="col"
+          class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+          Date
+        </th>
+        <th
+          scope="col"
+          class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+          Consommation
+        </th>
+        <th
+          scope="col"
+          class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
+          Panneaux
+        </th>
+        <th
+          scope="col"
+          class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
+          Batterie
+        </th>
+        <th
+          scope="col"
+          class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+          Actions
+        </th>
+      </tr>
+    </thead>
+    <tbody class="bg-white divide-y divide-gray-200">
+      {% for sim in simulations %}
+      <tr class="hover:bg-gray-50 transition-colors">
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+          {{ sim.created_at|date:"d/m/Y H:i" }}
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+          {{ sim.consommation_journaliere_wh }} Wh
+        </td>
+        <td
+          class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 hidden md:table-cell">
+          {{ sim.nombre_panneaux }} x {{ sim.puissance_panneau_w }}W
+        </td>
+        <td
+          class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 hidden md:table-cell">
+          {{ sim.capacite_batterie_ah }}Ah / {{ sim.tension_systeme_v }}V
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm">
+          <button
+            class="text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-md transition-colors"
+            hx-get="/api/dimensionnements/{{ sim.id }}/"
+            hx-target="#detail-modal"
+            hx-trigger="click"
+            hx-indicator="#modal-indicator">
+            Détails
+            <span id="modal-indicator" class="htmx-indicator inline-block">
+              <svg
+                class="animate-spin h-4 w-4 inline"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24">
+                <circle
+                  class="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  stroke-width="4"></circle>
+                <path
+                  class="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v8H4z"></path>
+              </svg>
+            </span>
+          </button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% else %}
+<div class="text-center text-gray-500 py-8">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    class="h-12 w-12 mx-auto text-gray-400 mb-4"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor">
+    <path
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+  </svg>
+  <p class="text-lg font-medium">Aucune simulation trouvée.</p>
+  <p class="text-sm mt-2">
+    Soumettez une nouvelle demande de dimensionnement ci-dessus pour voir les
+    résultats ici.
+  </p>
+</div>
+{% endif %}
+
+<!-- Hidden modal that will be filled with detail content -->
+<div
+  id="detail-modal"
+  class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 p-4">
+  <!-- Modal content will be loaded here -->
+</div>
+
+<!-- Script to handle modal visibility -->
+<script>
+  document.addEventListener("htmx:afterSwap", function (evt) {
+    if (evt.detail.target.id === "detail-modal") {
+      document.getElementById("detail-modal").classList.remove("hidden");
+      document.body.classList.add("overflow-hidden"); // Prevent scrolling when modal is open
+    }
+  });
+
+  // Close modal when clicking outside
+  document
+    .getElementById("detail-modal")
+    .addEventListener("click", function (evt) {
+      if (evt.target.id === "detail-modal") {
+        this.classList.add("hidden");
+        document.body.classList.remove("overflow-hidden"); // Re-enable scrolling
+        this.innerHTML = "";
+      }
+    });
+</script>
