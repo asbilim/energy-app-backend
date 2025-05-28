@@ -1,0 +1,11 @@
+/* static/src/styles.css */
+@import url("https://fonts.googleapis.com/css2?family=Geist+Sans:wght@100..900&family=Geist+Mono:wght@100..900&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Apply Geist as the base font-family using Tailwind's font-sans utility */
+html {
+  @apply font-sans;
+}
